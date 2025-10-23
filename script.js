@@ -1,15 +1,26 @@
 // Global variable to hold all data after fetching
 window.allAlerts = []; 
 
+// Global counter for the dynamic "wave"
+let trendCounter = 0;
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Start the core function to fetch data and run detection
     fetchAndAnalyzeAlerts();
     
-    // 2. Keep existing quick actions handlers for the footer section
+    // 2. Set an interval to re-calculate the stats
+    // This will make the "Detection Rate" fluctuate every 3 seconds (3000ms)
+    setInterval(() => {
+        // We pass window.allAlerts so it always uses the most recent data
+        updateCommunityStats(window.allAlerts);
+    }, 3000); // 3000 milliseconds = 3 seconds
+
+    // 3. Keep existing quick actions handlers for the footer section
     const quickActions = document.querySelectorAll('.actions-grid .action-item');
     quickActions.forEach(action => {
         action.addEventListener('click', (e) => {
             const link = action.getAttribute('href');
+            // This now ignores the quiz button, which is correct.
             if (link === '#') {
                 e.preventDefault(); 
                 const actionName = action.querySelector('span').textContent;
@@ -17,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // 4. (Removed setupQuizListeners() call)
 });
 
 // --------------------------------------------------------------
@@ -39,9 +52,8 @@ async function fetchAndAnalyzeAlerts() {
         
         window.allAlerts = analyzedData; // Save all data
         
-        // --- ADDED THIS LINE (as requested) ---
         // This now calculates stats from the live data.
-        updateCommunityStats(analyzedData); 
+        updateCommunityStats(analyData); 
         
         renderAlerts(analyzedData);
         
@@ -117,36 +129,57 @@ function displayAccuracyMeter(accuracy) {
     document.getElementById('accuracy-display').innerHTML = meterHTML;
 }
 
-// --- ADDED THIS NEW FUNCTION (as requested) ---
-// This function updates the community stats from the live data.
+// --- "HYBRID" FUNCTION WITH "RISE AND FALL" RATE ---
 function updateCommunityStats(alerts) {
-    if (!alerts) {
-        return; // Exit if there's no data
+
+    // --- 1. DEFINE YOUR TARGET BASE NUMBERS ---
+    const targetTotalIncidents = 1254;
+    const targetFraudIncidents = Math.round(targetTotalIncidents * 0.25); // 314
+    const targetDetectionRate = 78.0; // The center of our wave
+    // ----------------------------------------------------
+
+    let realTimeIncidents = 0;
+    let realTimeFraud = 0;
+
+    if (alerts) {
+        // 2. Calculate stats from the "real-time" data
+        realTimeIncidents = alerts.length;
+        realTimeFraud = alerts.filter(alert => alert.is_fraud === true).length;
     }
 
-    // 1. Calculate stats from the "real-time" data
-    const totalIncidents = alerts.length;
-    const fraudIncidents = alerts.filter(alert => alert.is_fraud === true).length;
+    // 3. Add your base numbers to the real-time numbers
+    const finalIncidents = targetTotalIncidents + realTimeIncidents;
+    const finalFraud = targetFraudIncidents + realTimeFraud;
+
+    // --- 4. Make the 78% "rise and fall" smoothly ---
     
-    let detectionRate = 0;
-    if (totalIncidents > 0) {
-        // Calculate (fraud / total) * 100
-        detectionRate = (fraudIncidents / totalIncidents) * 100;
-    }
+    // We use the global trendCounter to create a sine wave.
+    // (Increase the 0.2 to make the wave faster, decrease to make it slower)
+    trendCounter += 0.2; 
+    
+    // Math.sin() moves between -1 and 1. We multiply by 0.5 to get a range of -0.5 to +0.5.
+    const fluctuation = Math.sin(trendCounter) * 0.5; 
+    
+    // This makes the rate move smoothly between 77.5% and 78.5%
+    const dynamicRate = targetDetectionRate + fluctuation;
+    // ----------------------------------------------------------
 
-    // 2. Get the HTML elements (make sure your HTML has these IDs)
+    // 5. Get the HTML elements
     const incidentsEl = document.getElementById('users-protected-stat');
     const fraudEl = document.getElementById('scams-reported-stat');
     const rateEl = document.getElementById('safety-score-stat');
 
-    // 3. Update the numbers on the page
+    // 6. Update the numbers on the page
     if (incidentsEl) {
-        incidentsEl.textContent = totalIncidents.toLocaleString('en-US');
+        incidentsEl.textContent = finalIncidents.toLocaleString('en-US');
     }
     if (fraudEl) {
-        fraudEl.textContent = fraudIncidents.toLocaleString('en-US');
+        fraudEl.textContent = finalFraud.toLocaleString('en-US');
     }
     if (rateEl) {
-        rateEl.textContent = `${detectionRate.toFixed(0)}%`;
+        // This will now show a smooth rate like "78.2%", "78.4%", "78.5%", "78.4%", "78.2%"
+        rateEl.textContent = `${dynamicRate.toFixed(1)}%`;
     }
 }
+
+// --- ALL QUIZ CODE REMOVED ---
