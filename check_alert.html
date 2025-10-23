@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Alert Check</title>
+
+    <style>
+        /* --- Basic Page Styles --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        /* --- NEW: Tab Navigation Styles --- */
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid #dfe4ea;
+            margin-bottom: -2px; /* Overlap the content border */
+            z-index: 10;
+            position: relative;
+        }
+
+        .tab-link {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: #576574;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .tab-link:hover {
+            color: #222;
+        }
+
+        .tab-link.active {
+            color: #007bff;
+            border-color: #007bff;
+        }
+        
+        /* Match tab colors to sections */
+        .tab-link.active.success { color: #15803d; border-color: #15803d; }
+        .tab-link.active.error { color: #b91c1c; border-color: #b91c1c; }
+        .tab-link.active.warning { color: #b45309; border-color: #b45309; }
+        .tab-link.active.info { color: #1d4ed8; border-color: #1d4ed8; }
+        .tab-link.active.maintenance { color: #5b21b6; border-color: #5b21b6; }
+
+
+        /* --- Alert Section Styling --- */
+        .alert-section {
+            margin-bottom: 30px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            /* Add a top border to connect to the tabs */
+            border-top: 2px solid #dfe4ea;
+            border-top-left-radius: 0; /* Flatten corner under tabs */
+        }
+
+        /* --- NEW: Tab Content Styling --- */
+        .tab-content {
+            display: none; /* Hide all content by default */
+        }
+        .tab-content.active {
+            display: block; /* Show only the active one */
+        }
+
+
+        .section-header {
+            padding: 15px 25px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 1.25em;
+            font-weight: 600;
+        }
+
+        .alerts-wrapper {
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* --- Individual Alert Styling (No changes from here) --- */
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            border-left-width: 5px;
+        }
+
+        .alert-icon {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-right: 15px;
+            line-height: 1.4;
+        }
+
+        .alert-content {
+            flex-grow: 1;
+        }
+
+        .alert-content strong {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 1.05em;
+        }
+        
+        .alert-content .timestamp {
+            font-size: 0.85em;
+            color: #777;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.5em;
+            color: #aaa;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+
+        /* --- 1. Success Alerts --- */
+        .section-header.success { background-color: #f0fdf4; color: #15803d; }
+        .alert.success {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #14532d;
+        }
+        .alert.success .alert-icon { color: #22c55e; }
+
+        /* --- 2. Error Alerts --- */
+        .section-header.error { background-color: #fef2f2; color: #b91c1c; }
+        .alert.error {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            color: #7f1d1d;
+        }
+        .alert.error .alert-icon { color: #ef4444; }
+
+        /* --- 3. Warning Alerts --- */
+        .section-header.warning { background-color: #fffbeb; color: #b45309; }
+        .alert.warning {
+            background-color: #fffbeb;
+            border-color: #fef08a;
+            color: #713f12;
+        }
+        .alert.warning .alert-icon { color: #f59e0b; }
+
+        /* --- 4. Info Alerts --- */
+        .section-header.info { background-color: #eff6ff; color: #1d4ed8; }
+        .alert.info {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e3a8a;
+        }
+        .alert.info .alert-icon { color: #3b82f6; }
+
+        /* --- 5. Maintenance Alerts --- */
+        .section-header.maintenance { background-color: #f5f3ff; color: #5b21b6; }
+        .alert.maintenance {
+            background-color: #f5f3ff;
+            border-color: #ddd6fe;
+            color: #4c1d95;
+        }
+        .alert.maintenance .alert-icon { color: #7c3aed; }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <h1>System Alert Check</h1>
+
+        <div class="tab-nav">
+            <button class="tab-link success active" data-tab="success">Success (10)</button>
+            <button class="tab-link error" data-tab="error">Errors (10)</button>
+            <button class="tab-link warning" data-tab="warning">Warnings (10)</button>
+            <button class="tab-link info" data-tab="info">Info (10)</button>
+            <button class="tab-link maintenance" data-tab="maintenance">Maintenance (10)</button>
+        </div>
+
+        <section id="success" class="alert-section tab-content active">
+            <h2 class="section-header success">Success Notifications</h2>
+            <div class="alerts-wrapper">
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Update Complete:</strong> Your profile has been successfully updated.
+                        <span class="timestamp">1 min ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Payment Received:</strong> Invoice #8231 has been paid.
+                        <span class="timestamp">5 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>User Registered:</strong> New user 'jane.doe' has joined.
+                        <span class="timestamp">12 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>File Uploaded:</strong> 'report-Q4.pdf' was successfully uploaded.
+                        <span class="timestamp">20 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Connection Secure:</strong> You are now securely connected to the new network.
+                        <span class="timestamp">21 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Backup Created:</strong> Daily backup completed successfully.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Password Changed:</strong> Your password has been reset.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Permissions Granted:</strong> 'alex.smith' now has admin access.
+                        <span class="timestamp">2 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Service Activated:</strong> The new API service is now active.
+                        <span class="timestamp">3 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert success">
+                    <span class="alert-icon">✔</span>
+                    <div class="alert-content">
+                        <strong>Test Passed:</strong> All system integration tests passed.
+                        <span class="timestamp">3 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="error" class="alert-section tab-content">
+            <h2 class="section-header error">Error & Failure Alerts</h2>
+            <div class="alerts-wrapper">
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Payment Failed:</strong> Credit card for Invoice #8230 was declined.
+                        <span class="timestamp">2 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Database Connection Lost:</strong> Cannot connect to primary DB. Retrying...
+                        <span class="timestamp">5 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Login Failed:</strong> Too many failed login attempts for user 'admin'.
+                        <span class="timestamp">15 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Upload Failed:</strong> 'presentation.pptx' exceeded the 25MB file size limit.
+                        <span class="timestamp">22 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>API Timeout:</strong> Request to 'api/users' timed out after 30 seconds.
+                        <span class="timestamp">30 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>404 Not Found:</strong> Resource '/api/v2/products/123' does not exist.
+                        <span class="timestamp">45 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Permissions Denied:</strong> User 'guest' attempted to access a restricted page.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Service Crash:</strong> The 'Email-Dispatcher' service has crashed.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>Build Failed:</strong> Main branch build failed due to linting errors.
+                        <span class="timestamp">2 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert error">
+                    <span class="alert-icon">✖</span>
+                    <div class="alert-content">
+                        <strong>SSL Certificate Expired:</strong> The SSL certificate for 'shop.example.com' has expired.
+                        <span class="timestamp">2 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="warning" class="alert-section tab-content">
+            <h2 class="section-header warning">Warning & Caution Alerts</h2>
+            <div class="alerts-wrapper">
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>Disk Space Low:</strong> Server 'PROD-WEB-01' is at 85% disk capacity.
+                        <span class="timestamp">10 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>API Deprecated:</strong> You are using a deprecated version of the User API.
+                        <span class="timestamp">30 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>Password Nearing Expiration:</strong> Your password will expire in 3 days.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>High CPU Load:</strong> CPU usage on 'PROD-DB-02' has exceeded 90% for 5 minutes.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>Unsaved Changes:</strong> You have unsaved changes on the 'Settings' page.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>New Device Login:</strong> A login was detected from a new device in London, UK.
+                        <span class="timestamp">2 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>License Expiring:</strong> Your 'Pro Plan' license expires on Oct 30, 2025.
+                        <span class="timestamp">3 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>High Latency:</strong> API response times are slower than normal.
+                        <span class="timestamp">4 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>Unusual Activity:</strong> A high volume of requests was detected from IP 192.168.10.1.
+                        <span class="timestamp">5 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert warning">
+                    <span class="alert-icon">!</span>
+                    <div class="alert-content">
+                        <strong>Dependency Outdated:</strong> 'lodash' library has a new minor version available.
+                        <span class="timestamp">5 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+            </div>
+        </section>
+        
+        <section id="info" class="alert-section tab-content">
+            <h2 class="section-header info">Informational Updates</h2>
+            <div class="alerts-wrapper">
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>New Feature:</strong> You can now export your reports directly to CSV.
+                        <span class="timestamp">10 mins ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>System Update:</strong> A new patch (v2.4.1) has been applied.
+                        <span class="timestamp">1 hour ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>Did You Know?</strong> You can use keyboard shortcuts to navigate.
+                        <span class="timestamp">2 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>Policy Update:</strong> Our Terms of Service have been updated.
+                        <span class="timestamp">4 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>User 'markc' is now online.</strong>
+                        <span class="timestamp">4 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>Report Generated:</strong> Your monthly analytics report is ready for viewing.
+                        <span class="timestamp">5 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>New Comment:</strong> Sarah left a comment on 'Project Alpha'.
+                        <span class="timestamp">6 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>New Message:</strong> You have 1 unread message from your manager.
+                        <span class="timestamp">6 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>Welcome!</strong> Thanks for signing up for our newsletter.
+                        <span class="timestamp">7 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert info">
+                    <span class="alert-icon">ℹ</span>
+                    <div class="alert-content">
+                        <strong>Beta Access:</strong> The new 'Dashboard v3' beta is now open.
+                        <span class="timestamp">8 hours ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="maintenance" class="alert-section tab-content">
+            <h2 class="section-header maintenance">Scheduled Maintenance</h2>
+            <div class="alerts-wrapper">
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Scheduled Downtime:</strong> The platform will be down for 30 minutes on Sunday.
+                        <span class="timestamp">1 day ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Service Update:</strong> The 'Analytics' service will be in read-only mode tonight at 2 AM.
+                        <span class="timestamp">2 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Server Restart:</strong> 'PROD-WEB-02' is scheduled for a restart on Oct 26.
+                        <span class="timestamp">2 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Database Migration:</strong> We are migrating the user database this weekend.
+                        <span class="timestamp">3 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Security Patching:</strong> All servers will be patched on Monday at 1 AM.
+                        <span class="timestamp">3 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Network Upgrade:</strong> Expect brief interruptions as we upgrade our core network.
+                        <span class="timestamp">4 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Billing System Maintenance:</strong> The billing portal will be offline for 1 hour.
+                        <span class="timestamp">4 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>CDN Purge:</strong> We will be purging the CDN cache at midnight.
+                        <span class="timestamp">5 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>API Update:</strong> The 'v1' API will be decommissioned on Nov 1st.
+                        <span class="timestamp">5 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="alert maintenance">
+                    <span class="alert-icon">🛠</span>
+                    <div class="alert-content">
+                        <strong>Firewall Rules Update:</strong> New firewall rules are being applied.
+                        <span class="timestamp">6 days ago</span>
+                    </div>
+                    <button class="close-btn">&times;</button> </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    const targetId = link.dataset.tab; // Get the target content's ID from data-tab
+                    const targetContent = document.getElementById(targetId);
+
+                    // 1. Deactivate all tabs and content
+                    tabLinks.forEach(tab => tab.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    // 2. Activate the clicked tab and corresponding content
+                    link.classList.add('active');
+                    targetContent.classList.add('active');
+                });
+            });
+
+            // --- JavaScript for Close Buttons ---
+            // Add click event to all close buttons
+            const closeButtons = document.querySelectorAll('.close-btn');
+            closeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Find the parent .alert and hide it
+                    const alertBox = button.closest('.alert');
+                    if (alertBox) {
+                        alertBox.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
