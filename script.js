@@ -39,6 +39,10 @@ async function fetchAndAnalyzeAlerts() {
         
         window.allAlerts = analyzedData; // Save all data
         
+        // --- ADDED THIS LINE (as requested) ---
+        // This now calculates stats from the live data.
+        updateCommunityStats(analyzedData); 
+        
         renderAlerts(analyzedData);
         
         // Show the overall system accuracy (using the static value from the function)
@@ -111,4 +115,38 @@ function displayAccuracyMeter(accuracy) {
         </div>
     `;
     document.getElementById('accuracy-display').innerHTML = meterHTML;
+}
+
+// --- ADDED THIS NEW FUNCTION (as requested) ---
+// This function updates the community stats from the live data.
+function updateCommunityStats(alerts) {
+    if (!alerts) {
+        return; // Exit if there's no data
+    }
+
+    // 1. Calculate stats from the "real-time" data
+    const totalIncidents = alerts.length;
+    const fraudIncidents = alerts.filter(alert => alert.is_fraud === true).length;
+    
+    let detectionRate = 0;
+    if (totalIncidents > 0) {
+        // Calculate (fraud / total) * 100
+        detectionRate = (fraudIncidents / totalIncidents) * 100;
+    }
+
+    // 2. Get the HTML elements (make sure your HTML has these IDs)
+    const incidentsEl = document.getElementById('users-protected-stat');
+    const fraudEl = document.getElementById('scams-reported-stat');
+    const rateEl = document.getElementById('safety-score-stat');
+
+    // 3. Update the numbers on the page
+    if (incidentsEl) {
+        incidentsEl.textContent = totalIncidents.toLocaleString('en-US');
+    }
+    if (fraudEl) {
+        fraudEl.textContent = fraudIncidents.toLocaleString('en-US');
+    }
+    if (rateEl) {
+        rateEl.textContent = `${detectionRate.toFixed(0)}%`;
+    }
 }
