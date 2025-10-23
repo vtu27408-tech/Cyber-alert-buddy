@@ -28,8 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    // 4. (Removed setupQuizListeners() call)
 });
 
 // --------------------------------------------------------------
@@ -52,8 +50,9 @@ async function fetchAndAnalyzeAlerts() {
         
         window.allAlerts = analyzedData; // Save all data
         
+        // --- THIS LINE IS NOW FIXED ---
         // This now calculates stats from the live data.
-        updateCommunityStats(analyData); 
+        updateCommunityStats(analyzedData); 
         
         renderAlerts(analyzedData);
         
@@ -130,6 +129,7 @@ function displayAccuracyMeter(accuracy) {
 }
 
 // --- "HYBRID" FUNCTION WITH "RISE AND FALL" RATE ---
+// This is the correct function that adds the base numbers.
 function updateCommunityStats(alerts) {
 
     // --- 1. DEFINE YOUR TARGET BASE NUMBERS ---
@@ -141,7 +141,9 @@ function updateCommunityStats(alerts) {
     let realTimeIncidents = 0;
     let realTimeFraud = 0;
 
-    if (alerts) {
+    // This check is important. If alerts is undefined (from the typo), 
+    // it won't run, but the next interval will.
+    if (alerts && Array.isArray(alerts)) { 
         // 2. Calculate stats from the "real-time" data
         realTimeIncidents = alerts.length;
         realTimeFraud = alerts.filter(alert => alert.is_fraud === true).length;
@@ -154,7 +156,6 @@ function updateCommunityStats(alerts) {
     // --- 4. Make the 78% "rise and fall" smoothly ---
     
     // We use the global trendCounter to create a sine wave.
-    // (Increase the 0.2 to make the wave faster, decrease to make it slower)
     trendCounter += 0.2; 
     
     // Math.sin() moves between -1 and 1. We multiply by 0.5 to get a range of -0.5 to +0.5.
@@ -181,5 +182,3 @@ function updateCommunityStats(alerts) {
         rateEl.textContent = `${dynamicRate.toFixed(1)}%`;
     }
 }
-
-// --- ALL QUIZ CODE REMOVED ---
